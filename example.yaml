@@ -1,0 +1,34 @@
+model:
+  name: gcn
+  best_ckpt: 
+  ckpt: 
+  restore: False
+  log_frequency: 200
+  params: 
+    graph_conv_layers: [256, 256, 256, 256]
+    batchnorm: True 
+    dropout: 0.0
+    predictor_hidden_feats: 128
+    predictor_dropout: 0.5
+    activation: F.relu
+    number_atom_features: 32 # Set it to 32 when using chirality
+optimization:
+  learning_rate: 0.001
+  scheduler: exponential 
+  warmup_steps: 1000 # When warmup_steps is not 0, the learning rate will be increased to the target value linearly from 0. Otherwise, only use one scheduler. 
+  scheduler_params:
+    decay_rate: 0.98
+    decay_steps: 237
+  early_stopping:
+    patience: 10
+    smoothing_factor: 0.9
+    initial_training: 20
+  num_epoch: 500
+data:
+  training:
+  validation: 
+  batch_size: 512
+  transformation_strategy: exponential_transformation
+wandb:
+  project: 
+  

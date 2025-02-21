@@ -8,23 +8,41 @@ import torch
 from torch.utils.data import IterableDataset
 
 class GraphIterableDataset(IterableDataset):
-    def __init__(self, paths, shuffle, batch_size, transformation_strategy):
+    def __init__(self, paths, shuffle, batch_size, data_transformer):
+        """
+        Parameters
+        ----------
+        paths: List[str]
+            Path(s) to the dataset(s) to load.
+        by_shard: bool
+            Whether to load all data into memory.
+        shuffle: bool
+            Whether to shuffle the data.
+        batch_size: int
+            The number of data points in one batch.
+        data_transformer:
+        """
         super(GraphIterableDataset).__init__()
         self.dataset = self.load_data(paths)
 
         if shuffle:
-            self.dataset = self.shuffle(self.dataset)
+            self.shuffle()
         
-        if transformation_strategy is not None:
-            self.dataset = self.transform(self.dataset, transformation_strategy)
+        if  is not None:
+            self.transform(data_transformer)
         
         if batch_size > 1:
-            self.dataset = self.batch(self.dataset, batch_size)
+            self.batch(batch_size)
     
     def __getitem__(self, index):
         pass
 
     def __iter__(self):
+        """
+        If the dataset has labels, then the iterator will give a batch of graphs 
+        and its corresponding labels. Otherwise, it will only give a batch of graphs.
+        
+        """
         graphs = self.dataset[0]
         labels = self.dataset[1]
 
@@ -71,7 +89,7 @@ class GraphIterableDataset(IterableDataset):
             
         return merged_dataset
     
-    def shuffle(self, dataset):
+    def shuffle(self):
         """
         Shuffle the dataset.
 
@@ -88,15 +106,15 @@ class GraphIterableDataset(IterableDataset):
 
         from operator import itemgetter 
 
-        shuffled_indices = list(range(len(dataset[0])))
+        shuffled_indices = list(range(len(self.dataset[0])))
         random.shuffle(shuffled_indices)
 
-        shuffled_0 = itemgetter(*shuffled_indices)(dataset[0])
-        shuffled_1 = dataset[1]['labels'][torch.tensor(shuffled_indices), :]
+        shuffled_0 = itemgetter(*shuffled_indices)(self.dataset[0])
+        shuffled_1 = self.dataset[1]['labels'][torch.tensor(shuffled_indices), :]
 
-        return (shuffled_0, {'labels': shuffled_1})
+        self.dataset = (shuffled_0, {'labels': shuffled_1})
     
-    def batch(self, dataset, batch_size):
+    def batch(self, batch_size):
         """
         Make the dataset into batches.
 
@@ -121,13 +139,17 @@ class GraphIterableDataset(IterableDataset):
             batched_labels.append(all_labels[i:i+batch_size])
         return (batched_features, batched_labels)
 
-    def transform(self, dataset, transformation_strategy):
-        if transformation_strategy == 'normalization':
-            std, mean = torch.std_mean(dataset[1]['labels'], dim=0)
-            dataset[1]['labels'] = (dataset[1]['labels'] - mean) / std
-        elif transformation_strategy == 'exponential_transformation':
-            minimum = torch.abs(torch.min(dataset[1]['labels'][:]))
-            dataset[1]['labels'] = 1 - torch.exp(-3 * dataset[1]['labels'] / minimum)
-        
-        return dataset
+    def transform(self, data_transformer):
+        """
+        Transform the labels of self.dataset.
+
+        Parameters
+        ----------
+        data_transformer:
+
+        Returns
+        -------
+            None
+        """
+        self.dataset = data_transformer.transform(self.dataset)
         

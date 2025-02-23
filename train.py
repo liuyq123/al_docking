@@ -12,7 +12,8 @@ from torch.utils.data import DataLoader
 
 import wandb
 
-from dataset import GraphIterableDataset
+from utils.data.dataset import GraphIterableDataset
+from utils.data.data_transformer import DataTransformer
 from src.model_creator import ModelCreator
 from src.scheduler_creator import SchedulerCreator
 from utils.utils import yaml_parser
@@ -38,14 +39,16 @@ class Trainer:
         
         self.scheduler = SchedulerCreator(config['optimization']).get_scheduler(self.optimizer)
 
+        train_data_transformer = DataTransformer(config['data']['transformation_strategy'])
+
         self.train_dataset = GraphIterableDataset(config['data']['training'], 
-                                         shuffle=True, 
-                                         batch_size=config['data']['batch_size'],
-                                         transformation_strategy=config['data']['transformation_strategy'])
+                                                  shuffle=True, 
+                                                  batch_size=config['data']['batch_size'],
+                                                  data_transformer=train_data_transformer)
         self.valid_dataset = GraphIterableDataset(config['data']['validation'], 
-                                         shuffle=True, 
-                                         batch_size=config['data']['batch_size'],
-                                         transformation_strategy=config['data']['transformation_strategy'])
+                                                  shuffle=True, 
+                                                  batch_size=config['data']['batch_size'],
+                                                  data_transformer=train_data_transformer)
         
         self.log_frequency = config['model']['log_frequency']
         self.ckpt = config['model']['ckpt']

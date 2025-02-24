@@ -2,7 +2,7 @@ from typing import Optional, List
 
 import torch.nn.functional as F
 
-from gnns import GCNModel, GATModel
+from src.gnns import GCNModel, GATModel
 
 class ModelCreator:
     """

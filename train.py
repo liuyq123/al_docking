@@ -132,8 +132,6 @@ class Trainer:
         loss = self.criterion(outputs, labels)
 
         loss.backward()
-        print('optim: {}'.format(self.optimizer.param_groups[0]['lr']))
-        print('scheduler: {}'.format(self.scheduler.get_last_lr()[0]))
 
         self.optimizer.step()
         self.scheduler.step()

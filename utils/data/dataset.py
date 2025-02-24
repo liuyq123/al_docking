@@ -28,7 +28,7 @@ class GraphIterableDataset(IterableDataset):
         if shuffle:
             self.shuffle()
         
-        if  is not None:
+        if data_transformer is not None:
             self.transform(data_transformer)
         
         if batch_size > 1:
@@ -130,14 +130,15 @@ class GraphIterableDataset(IterableDataset):
         """
 
         batched_features = []
-        for i in range(0, len(dataset[0]), batch_size):
-            batched_features.append(dgl.batch(dataset[0][i:i+batch_size]))
+        for i in range(0, len(self.dataset[0]), batch_size):
+            batched_features.append(dgl.batch(self.dataset[0][i:i+batch_size]))
         
-        all_labels = dataset[1]['labels']
+        all_labels = self.dataset[1]['labels']
         batched_labels = []
         for i in range(0, len(all_labels), batch_size):
             batched_labels.append(all_labels[i:i+batch_size])
-        return (batched_features, batched_labels)
+        
+        self.dataset = (batched_features, batched_labels)
 
     def transform(self, data_transformer):
         """

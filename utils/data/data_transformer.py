@@ -2,6 +2,7 @@ import torch
 
 class DataTransformer:
     def __init__(self, transformation_strategy):
+        self.transformation_strategy = transformation_strategy
         self.params = {}
     
     def transform(self, dataset):
@@ -20,7 +21,7 @@ class DataTransformer:
         -------
             dataset
         """
-        if transformation_strategy == 'normalization':
+        if self.transformation_strategy == 'normalization':
             if len(self.params) == 0:
                 std, mean = torch.std_mean(dataset[1]['labels'], dim=0)
                 self.params['std'] = std
@@ -31,10 +32,10 @@ class DataTransformer:
 
             dataset[1]['labels'] = (dataset[1]['labels'] - mean) / std
 
-        elif transformation_strategy == 'exponential_transformation':
+        elif self.transformation_strategy == 'exponential_transformation':
             if len(self.params) == 0:
                 minimum = torch.abs(torch.min(dataset[1]['labels'][:]))
-                self.params['minimum'] = 'minimum'
+                self.params['minimum'] = minimum
             else:
                 minimum = self.params['minimum']
 

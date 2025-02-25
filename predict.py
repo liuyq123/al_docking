@@ -43,7 +43,7 @@ def predict(config: dict,
         device = torch.device('cpu')
 
     model = ModelCreator(config['model']).get_model()
-    checkpoint = torch.load(config['model']['best_ckpt'] + '.pt', weights_only=False)
+    checkpoint = torch.load(config['model']['best_ckpt'] + '/best.pt', weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'], strict=True)
     model = model.to(device)
     model.eval()

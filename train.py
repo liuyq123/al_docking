@@ -62,7 +62,8 @@ class Trainer:
 
         for n_epoch in range(self.num_epoch):
             train_dataloader = DataLoader(self.train_dataset,  
-                                          collate_fn=lambda x: x[0])
+                                          collate_fn=lambda x: x[0],
+                                          pin_memory=True)
             for inputs, labels in train_dataloader:
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
@@ -85,7 +86,8 @@ class Trainer:
                     avg_loss = 0
 
                     valid_dataloader = DataLoader(self.valid_dataset, 
-                                                  collate_fn=lambda x: x[0])
+                                                  collate_fn=lambda x: x[0],
+                                                  pin_memory=True)
                     scores = self.do_eval(valid_dataloader)
 
                     r = scores['spearmanr']

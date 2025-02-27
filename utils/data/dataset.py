@@ -1,6 +1,7 @@
 import glob
 from typing import List
 import random
+import pickle
 
 import dgl
 
@@ -8,7 +9,12 @@ import torch
 from torch.utils.data import IterableDataset
 
 class GraphIterableDataset(IterableDataset):
-    def __init__(self, paths, shuffle, batch_size, data_transformer):
+    def __init__(self, 
+                 paths, 
+                 mode, 
+                 shuffle=False, 
+                 batch_size=1, 
+                 data_transformer=None):
         """
         Parameters
         ----------
@@ -21,9 +27,13 @@ class GraphIterableDataset(IterableDataset):
         batch_size: int
             The number of data points in one batch.
         data_transformer:
+        mode: str
+            Whether or not to use this class in training mode or prediction mode
         """
         super(GraphIterableDataset).__init__()
-        self.dataset = self.load_data(paths)
+        self.paths = paths
+        self.mode = mode
+        self.dataset = self.load_data()
 
         if shuffle:
             self.shuffle()
@@ -33,25 +43,26 @@ class GraphIterableDataset(IterableDataset):
         
         if batch_size > 1:
             self.batch(batch_size)
+        
+        if self.mode == 'prediction':
+            self.n_shards = len(glob.glob(paths + '/*'))
     
     def __getitem__(self, index):
         pass
 
     def __iter__(self):
         """
-        If the dataset has labels, then the iterator will give a batch of graphs 
-        and its corresponding labels. Otherwise, it will only give a batch of graphs.
-        
+        If the mode is training, then the iterator will give a batch of graphs 
+        and its corresponding labels. Otherwise, it will a list of graphs.
         """
-        graphs = self.dataset[0]
-        labels = self.dataset[1]
-
-        if labels is not None:
+        if self.mode == 'training':
+            graphs = self.dataset[0]
+            labels = self.dataset[1]
             return zip(graphs, labels)
-        else:
-            return iter(graphs)
+        elif self.mode == 'prediction':
+            return self.load_data()
 
-    def load_data(self, paths: List[str]):
+    def load_data(self):
         """
         Load data into the memory. If number of path(s) is greater than one, 
         than data from thoses sources will be merged together. 
@@ -63,31 +74,44 @@ class GraphIterableDataset(IterableDataset):
 
         Returns
         -------
-        merged_dataset:
+        dataset:
             A list of dgl graphs with labels (if provided).
         """
+        if self.mode == 'training':
+            merged_dataset = ([],{'labels':None})
 
-        merged_dataset = ([],{'labels':None})
+            graphs_to_merge = []
+            labels_to_merge = []
 
-        graphs_to_merge = []
-        labels_to_merge = []
+            for path in self.paths:
 
-        for path in paths:
+                shards = glob.glob(path)
 
-            shards = glob.glob(path)
+                for i in range(len(shards)):
+                    graphs = dgl.load_graphs(path + '/shard{}'.format(i+1))
 
-            for i in range(len(shards)):
+                    graphs_to_merge.extend(graphs[0])
+                    labels_to_merge.extend(graphs[1]['labels'])
 
-                graphs = dgl.load_graphs(path + '/shard{}'.format(i+1))
-
-                graphs_to_merge.extend(graphs[0])
-                labels_to_merge.extend(graphs[1]['labels'])
-                print('labels', graphs[1]['labels'].shape)
-
-        merged_dataset[0].extend(graphs_to_merge)
-        merged_dataset[1]['labels'] = torch.stack(labels_to_merge, 0)
+            merged_dataset[0].extend(graphs_to_merge)
+            merged_dataset[1]['labels'] = torch.stack(labels_to_merge, 0)
             
-        return merged_dataset
+            return merged_dataset
+
+        elif self.mode == 'prediction':
+            def _load(file):
+                with open (file, 'rb') as f:
+                    dataset = pickle.load(f)
+                return dataset[0]
+
+            def load_generator(files):
+                for file in files:
+                    yield _load(file)
+
+            n_shards = len(glob.glob(self.paths + '/*'))
+            files = [self.paths + '/shard{}'.format(i+1) for i in range(n_shards)]
+
+            return load_generator(files)
     
     def shuffle(self):
         """

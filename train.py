@@ -36,11 +36,13 @@ class Trainer:
         self.train_dataset = GraphIterableDataset(config['data']['training'], 
                                                   shuffle=True, 
                                                   batch_size=config['data']['batch_size'],
-                                                  data_transformer=train_data_transformer)
+                                                  data_transformer=train_data_transformer,
+                                                  mode='training')
         self.valid_dataset = GraphIterableDataset(config['data']['validation'], 
                                                   shuffle=True, 
                                                   batch_size=config['data']['batch_size'],
-                                                  data_transformer=train_data_transformer)
+                                                  data_transformer=train_data_transformer,
+                                                  mode='training')
         
         self.smoothing_factor = config['optimization']['early_stopping']['smoothing_factor']
         self.initial_training = config['optimization']['early_stopping']['initial_training']

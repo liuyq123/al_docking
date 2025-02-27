@@ -8,9 +8,11 @@ import numpy as np
 import polars as pl
 import pyarrow as pa
 import torch
+from torch.utils.data import DataLoader
 
 from utils.utils import yaml_parser
 from src.model_creator import ModelCreator
+from utils.data.dataset import GraphIterableDataset
 
 def predict(config: dict, 
             featurized_data_path: str, 
@@ -48,21 +50,22 @@ def predict(config: dict,
     model = model.to(device)
     model.eval()
     
-    n_shards = len(glob.glob(featurized_data_path + '/*'))
+    pred_dataset = GraphIterableDataset(paths=featurized_data_path, 
+                                   mode='prediction')
     pred_arrs = []
-    for i in range(n_shards):
-        with open (featurized_data_path + '/shard{}'.format(i+1), 'rb') as f:
-            dataset = pickle.load(f)
-            dataset = dataset[0]
-            
+    train_dataloader = DataLoader(pred_dataset, 
+                                  collate_fn=lambda x: x[0],
+                                  pin_memory=True)
+    
+    for dataset in train_dataloader:
         output = []
         for i in range(0, len(dataset)):
             inputs = dataset[i].to(device)
             output_values = model(inputs)
             output_values = output_values.detach().cpu().numpy()
             output.append(output_values)
-            
         shard_prediction = np.concatenate(output, axis=0)
+
         pred_arrs.extend(shard_prediction)
     predictions = np.concatenate(pred_arrs, axis=0)
 

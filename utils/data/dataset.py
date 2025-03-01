@@ -111,8 +111,15 @@ class GraphIterableDataset(IterableDataset):
             n_shards = len(glob.glob(self.paths + '/*'))
             files = [self.paths + '/shard{}'.format(i+1) for i in range(n_shards)]
 
-            return load_generator(files)
-    
+            worker_info = torch.utils.data.get_worker_info()
+            if worker_info is None:  
+                return load_generator(files)
+            else:
+                worker_total_num = torch.utils.data.get_worker_info().num_workers
+                worker_id = torch.utils.data.get_worker_info().id
+
+                return itertools.islice(map(_load, iter(files)), worker_id, None, worker_total_num)
+
     def shuffle(self):
         """
         Shuffle the dataset.
@@ -177,4 +184,3 @@ class GraphIterableDataset(IterableDataset):
             None
         """
         self.dataset = data_transformer.transform(self.dataset)
-        

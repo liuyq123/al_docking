@@ -55,6 +55,9 @@ class Trainer:
         self.mode = ''
 
     def fit(self):
+        """
+        Train the model.
+        """
         wandb.init(project=self.project_name)
 
         avg_loss = 0
@@ -152,6 +155,18 @@ class Trainer:
         return loss
     
     def do_eval(self, dataloader):
+        """
+        Evaluate the model on the validation dataset.
+
+        Parameters
+        ----------
+        dataloader
+
+        Returns
+        -------
+        dict:
+            A dictionary that contains the metrics to monitor.
+        """
         if self.mode != 'eval':
             self.model.eval()
             self.mode = 'eval'

@@ -20,7 +20,8 @@ def predict(config: dict,
             id_field: str,
             batch_size: int,
             output_dir: str,
-            output_name: str) -> None:
+            output_name: str,
+            num_workers: int) -> None:
     """
     Make predictions with the trained model.
 
@@ -39,10 +40,7 @@ def predict(config: dict,
     -------
     None
     """
-    if torch.cuda.is_available():
-       device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = ModelCreator(config['model']).get_model()
     checkpoint = torch.load(config['model']['best_ckpt'] + '/best.pt', weights_only=False)
@@ -51,13 +49,13 @@ def predict(config: dict,
     model.eval()
     
     pred_dataset = GraphIterableDataset(paths=featurized_data_path, 
-                                   mode='prediction')
+                                        mode='prediction')
     pred_arrs = []
-    train_dataloader = DataLoader(pred_dataset, 
-                                  collate_fn=lambda x: x[0],
-                                  pin_memory=True)
+    dataloader = DataLoader(pred_dataset, 
+                            collate_fn=lambda x: x[0],
+                            num_workers=num_workers)
     
-    for dataset in train_dataloader:
+    for dataset in dataloader:
         output = []
         for i in range(0, len(dataset)):
             inputs = dataset[i].to(device)
@@ -90,12 +88,13 @@ def main():
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--output_dir")
     parser.add_argument("--output_name")
+    parser.add_argument("--num_workers", type=int, default=0)
     
     args = parser.parse_args()
 
     config = yaml_parser(args.config)
     
-    predict(config, args.featurized_data_path, args.raw_data_path, args.id_field, args.batch_size, args.output_dir, args.output_name)
+    predict(config, args.featurized_data_path, args.raw_data_path, args.id_field, args.batch_size, args.output_dir, args.output_name, args.num_workers)
 
 if __name__ == "__main__":
     main()

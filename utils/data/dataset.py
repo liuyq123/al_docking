@@ -2,6 +2,7 @@ import glob
 from typing import List
 import random
 import pickle
+import itertools
 
 import dgl
 
@@ -53,7 +54,7 @@ class GraphIterableDataset(IterableDataset):
     def __iter__(self):
         """
         If the mode is training, then the iterator will give a batch of graphs 
-        and its corresponding labels. Otherwise, it will a list of graphs.
+        and its corresponding labels. Otherwise, it will return a list of graphs.
         """
         if self.mode == 'training':
             graphs = self.dataset[0]
